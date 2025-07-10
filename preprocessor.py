@@ -4,12 +4,10 @@ import numpy as np
 import argparse
 import joblib
 import os
-import time
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV, ShuffleSplit
+from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-#from mne.decoding import CSP
 from csp import CSP
 from sklearn.svm import SVC
 
