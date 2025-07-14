@@ -19,7 +19,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Instalando paquetes..."
-pip install --upgrade mne matplotlib joblib
+pip install --upgrade mne matplotlib joblib pandas
 
 if [ $? -ne 0 ]; then
     echo "Error: Falló la instalación de uno o más paquetes."

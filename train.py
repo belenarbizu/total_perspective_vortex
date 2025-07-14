@@ -6,7 +6,7 @@ import joblib
 import os
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV
+from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV, ShuffleSplit
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from csp import CSP
 from sklearn.svm import SVC
@@ -17,27 +17,17 @@ param_grid = {
 
 BAD_SUBJECTS = [100, 104, 106]
 
-class Preprocess:
-
+class Data_EEG:
     def __init__(self, subject=None, run=None, task=None):
         mne.set_log_level("WARNING")
         if not subject and not run and not task:
             self.experiments()
         else:
-            channels_names = ['FC5', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'C5',
-                    'C3', 'C1', 'Cz', 'C2', 'C4', 'C6', 'CP5', 'CP3', 'CP1',
-                    'CPz', 'CP2', 'CP4', 'CP6', 'Fp1', 'Fpz', 'Fp2', 'AF7', 'AF3',
-                    'AFz', 'AF4', 'AF8', 'F7', 'F5', 'F3', 'F1', 'Fz', 'F2',
-                    'F4', 'F6', 'F8', 'FT7', 'FT8', 'T7', 'T8', 'T9', 'T10',
-                    'TP7', 'TP8', 'P7', 'P5', 'P3', 'P1', 'Pz', 'P2', 'P4',
-                    'P6', 'P8', 'PO7', 'PO3', 'POz', 'PO4', 'PO8', 'O1', 'Oz', 'O2', 'Iz']
-
             self.subject, self.run = self.set_numbers(subject, run)
             self.raw = mne.io.read_raw_edf(f"/home/barbizu-/sgoinfre/physionet.org/files/eegmmidb/1.0.0/S{self.subject}/S{self.subject}R{self.run}.edf", preload=True)
-            
-            #change names of channels
-            mapping = {name: channels_names[i] for i, name in enumerate(self.raw.ch_names)}
-            self.raw.rename_channels(mapping)
+
+            #change channels names
+            self.change_channels_names()
             
             #set montage to standard_1020
             montage = mne.channels.make_standard_montage('standard_1020')
@@ -75,6 +65,18 @@ class Preprocess:
                 self.predict("train")
 
 
+    def change_channels_names(self):
+        channels_names = ['FC5', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'C5',
+        'C3', 'C1', 'Cz', 'C2', 'C4', 'C6', 'CP5', 'CP3', 'CP1',
+        'CPz', 'CP2', 'CP4', 'CP6', 'Fp1', 'Fpz', 'Fp2', 'AF7', 'AF3',
+        'AFz', 'AF4', 'AF8', 'F7', 'F5', 'F3', 'F1', 'Fz', 'F2',
+        'F4', 'F6', 'F8', 'FT7', 'FT8', 'T7', 'T8', 'T9', 'T10',
+        'TP7', 'TP8', 'P7', 'P5', 'P3', 'P1', 'Pz', 'P2', 'P4',
+        'P6', 'P8', 'PO7', 'PO3', 'POz', 'PO4', 'PO8', 'O1', 'Oz', 'O2', 'Iz']
+
+        mapping = {name: channels_names[i] for i, name in enumerate(self.raw.ch_names)}
+        self.raw.rename_channels(mapping)
+
     def plot_filter(self):
         fig = self.raw.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw")
         plt.savefig("raw_data.png")
@@ -86,7 +88,9 @@ class Preprocess:
 
 
     def epoch_data(self):
-        epochs = mne.Epochs(self.raw_filtered, self.events, event_id=self.event_id, tmin=-0.1, tmax=4.0, baseline=None, preload=True, verbose=False)
+        channels_to_use = ['FC3', 'FCz', 'FC4', 'C3', 'Cz', 'C4', 'CP3', 'CPz', 'CP4']
+        picks = mne.pick_channels(self.raw_filtered.info['ch_names'], include=channels_to_use)
+        epochs = mne.Epochs(self.raw_filtered, self.events, event_id=self.event_id, picks=picks, tmin=-0.1, tmax=4.0, baseline=None, preload=True, verbose=False)
         epochs.drop_bad()
         epochs = epochs["T1", "T2"]
 
@@ -125,11 +129,12 @@ class Preprocess:
             ('svm', SVC(kernel='linear', C=1))
         ])
 
-        scores = cross_val_score(self.pipe, self.X_train, self.y_train, cv=5)
+        cv = ShuffleSplit(10, test_size=0.2, random_state=42)
+        scores = cross_val_score(self.pipe, self.X_train, self.y_train, cv=cv)
         if not task == "experiment":
             print(scores)
             print("cross_val_score:", scores.mean())
-        self.grid = GridSearchCV(self.pipe, param_grid, cv=5, n_jobs=-1, scoring="accuracy", verbose=False)
+        self.grid = GridSearchCV(self.pipe, param_grid, cv=cv, n_jobs=-1, scoring="accuracy", verbose=False)
         self.grid.fit(self.X_train, self.y_train)
     
 
@@ -199,16 +204,19 @@ class Preprocess:
 
     
     def experiment_n(self, num, subjects, ranges, events):
+        channels_to_use = ['FC3', 'FCz', 'FC4', 'C3', 'Cz', 'C4', 'CP3', 'CPz', 'CP4']
         total_accuracy = 0
         for subject in subjects:
             subject_accuracy = 0
             for run in range(ranges[0], ranges[1], 4):
                 self.subject, self.run = self.set_numbers(subject, run)
                 self.raw = mne.io.read_raw_edf(f"/sgoinfre/students/barbizu-/physionet.org/files/eegmmidb/1.0.0/S{self.subject}/S{self.subject}R{self.run}.edf", preload=True)
+                self.change_channels_names()
                 self.raw_filtered = self.raw.copy().filter(l_freq=8., h_freq=40.)
                 self.raw_filtered.set_eeg_reference('average', projection=True)
+                picks = mne.pick_channels(self.raw_filtered.info['ch_names'], include=channels_to_use)
                 self.events, self.event_id = mne.events_from_annotations(self.raw_filtered)
-                epochs = mne.Epochs(self.raw_filtered, self.events, event_id=self.event_id, tmin=0, tmax=4.0, baseline=None, preload=True, verbose=False)
+                epochs = mne.Epochs(self.raw_filtered, self.events, event_id=self.event_id, picks=picks, tmin=0, tmax=4.0, baseline=None, preload=True, verbose=False)
                 epochs.drop_bad()
                 epochs = epochs[events]
                 X = epochs.get_data(picks="eeg")
@@ -231,9 +239,9 @@ def main():
     parser.add_argument("task", choices=["train", "predict"], nargs='?', default=None, help="Task to perform")
     args = parser.parse_args()
     if args.subject and args.run and args.task:
-        preprocess = Preprocess(args.subject, args.run, args.task)
+        data = Data_EEG(args.subject, args.run, args.task)
     elif not args.subject and not args.run and not args.task:
-        preprocess = Preprocess()
+        data = Data_EEG()
     else:
         parser.print_help()
         print("Error. You must add [subject], [run], [{train,predict}]")
