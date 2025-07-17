@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV, ShuffleSplit
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.decomposition import PCA
 from csp import CSP
 from sklearn.svm import SVC
 
@@ -51,8 +52,9 @@ class Data_EEG:
 
             self.events, self.event_id = mne.events_from_annotations(self.raw_filtered)
 
-            epochs = self.epoch_data()
-            X = epochs.get_data(picks="eeg")
+            epochs, power = self.epoch_data()
+            X = power.get_data(picks="eeg")
+            X = X.mean(axis=-1).reshape(len(X), -1)
             y = epochs.events[:, 2]
             self.split_datasets(X, y)
 
@@ -60,7 +62,8 @@ class Data_EEG:
                 self.train(epochs, "train")
                 if not os.path.exists("models"):
                             os.makedirs("models")
-                joblib.dump(self.grid, f"models/model_{self.subject}_{self.run}.pkl")
+                #joblib.dump(self.grid, f"models/model_{self.subject}_{self.run}.pkl")
+                joblib.dump(self.pipe, f"models/model_{self.subject}_{self.run}.pkl")
             elif task == "predict":
                 self.predict("train")
 
@@ -94,18 +97,10 @@ class Data_EEG:
         epochs.drop_bad()
         epochs = epochs["T1", "T2"]
 
-        # fig = mne.viz.plot_events(self.events, event_id=self.event_id, show=False)
-        # plt.savefig("events.png")
-        # plt.close(fig)
+        freqs = np.arange(8, 40, 2) #frequencias desde 8 a 40 Hz
+        power = epochs.compute_tfr('morlet', tmin=-0.1, tmax=4.0, freqs=freqs, return_itc=False)
 
-        # epochs["T1"].compute_psd().plot(picks="eeg", exclude="bads", amplitude=False, average=True)
-        # plt.savefig("T1_psd.png")
-        # epochs["T2"].compute_psd().plot(picks="eeg", exclude="bads", amplitude=False, average=True)
-        # plt.savefig("T2_psd.png")
-        # epochs["T0"].compute_psd().plot(picks="eeg", exclude="bads", amplitude=False, average=True)
-        # plt.savefig("T0_psd.png")
-
-        return epochs
+        return epochs, power
 
 
     def set_numbers(self, subject, run):
@@ -124,8 +119,9 @@ class Data_EEG:
 
     def train(self, epochs, task="experiment"):
         self.pipe = Pipeline([
-            ('csp', CSP()),
+            #('csp', CSP()),
             ('scaler', StandardScaler()),
+            ('pca', PCA()),
             ('svm', SVC(kernel='linear', C=1))
         ])
 
@@ -134,21 +130,24 @@ class Data_EEG:
         if not task == "experiment":
             print(scores)
             print("cross_val_score:", scores.mean())
-        self.grid = GridSearchCV(self.pipe, param_grid, cv=cv, n_jobs=-1, scoring="accuracy", verbose=False)
-        self.grid.fit(self.X_train, self.y_train)
+        #self.grid = GridSearchCV(self.pipe, param_grid, cv=cv, n_jobs=-1, scoring="accuracy", verbose=False)
+        #self.grid.fit(self.X_train, self.y_train)
+        self.pipe.fit(self.X_train, self.y_train)
     
 
     def predict(self, task="experiment"):
         if not task == "experiment":
             try:
-                self.grid = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
+                #self.grid = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
+                self.pipe = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
             except Exception as e:
                 print(e)
                 exit(1)
 
         accuracy = []
         for n in range(self.X_test.shape[0]):
-            pred = self.grid.best_estimator_.predict(self.X_test[n:n + 1, :, :])[0]
+            #pred = self.grid.best_estimator_.predict(self.X_test[n:n + 1, :, :])[0]
+            pred = self.pipe.predict(self.X_test[n].reshape(1, -1))[0]
             truth = self.y_test[n:n + 1][0]
             accuracy.append(pred == truth)
             if not task == "experiment":
@@ -219,7 +218,10 @@ class Data_EEG:
                 epochs = mne.Epochs(self.raw_filtered, self.events, event_id=self.event_id, picks=picks, tmin=0, tmax=4.0, baseline=None, preload=True, verbose=False)
                 epochs.drop_bad()
                 epochs = epochs[events]
-                X = epochs.get_data(picks="eeg")
+                freqs = np.arange(8, 40, 2) #frequencias desde 8 a 40 Hz
+                power = epochs.compute_tfr('morlet', tmin=-0.1, tmax=4.0, freqs=freqs, return_itc=False)
+                X = power.get_data(picks="eeg")
+                X = X.mean(axis=-1).reshape(len(X), -1)
                 y = epochs.events[:, 2]
                 self.split_datasets(X, y)
                 self.train(epochs)
