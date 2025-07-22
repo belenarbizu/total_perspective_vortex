@@ -122,7 +122,8 @@ class Data_EEG:
             #('csp', CSP()),
             ('scaler', StandardScaler()),
             ('pca', PCA()),
-            ('svm', SVC(kernel='linear', C=1))
+            #('svm', SVC(kernel='linear', C=1))
+            ('lda', LinearDiscriminantAnalysis())
         ])
 
         cv = ShuffleSplit(10, test_size=0.2, random_state=42)
