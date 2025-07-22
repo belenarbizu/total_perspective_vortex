@@ -8,12 +8,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV, ShuffleSplit
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.decomposition import PCA
+from pca import PCA
 from csp import CSP
 from sklearn.svm import SVC
 
 param_grid = {
-    "csp__n_components": [2, 4, 6, 8]
+    "csp__n_components": [2, 4, 6, 8, 10]
 }
 
 BAD_SUBJECTS = [100, 104, 106]
