@@ -8,12 +8,24 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV, ShuffleSplit
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 from pca import PCA
 from csp import CSP
-from sklearn.svm import SVC
 
-param_grid = {
-    "csp__n_components": [2, 4, 6, 8, 10]
+param_grid_lda = {
+    "pca__n_components": [2, 4, 6, 8, 10],
+    "lda__solver": ['svd', 'lsqr'] #apenas mejora con esto
+}
+
+param_grid_rf = {
+    "rf__n_estimators": [50, 100, 200],
+    "rf__max_depth": [None, 10, 20]
+}
+
+param_grid_svm = {
+    "svm__C": [0.1, 1, 10],
+    "svm__kernel": ["linear", "rbf"]
 }
 
 BAD_SUBJECTS = [100, 104, 106]
@@ -61,9 +73,9 @@ class Data_EEG:
             if task == "train":
                 self.train(epochs, "train")
                 if not os.path.exists("models"):
-                            os.makedirs("models")
-                #joblib.dump(self.grid, f"models/model_{self.subject}_{self.run}.pkl")
-                joblib.dump(self.pipe, f"models/model_{self.subject}_{self.run}.pkl")
+                    os.makedirs("models")
+                joblib.dump(self.grid, f"models/model_{self.subject}_{self.run}.pkl")
+                #joblib.dump(self.pipe, f"models/model_{self.subject}_{self.run}.pkl")
             elif task == "predict":
                 self.predict("train")
 
@@ -119,11 +131,21 @@ class Data_EEG:
 
     def train(self, epochs, task="experiment"):
         self.pipe = Pipeline([
-            #('csp', CSP()),
             ('scaler', StandardScaler()),
             ('pca', PCA()),
-            #('svm', SVC(kernel='linear', C=1))
             ('lda', LinearDiscriminantAnalysis())
+        ])
+
+        self.pipe_rf = Pipeline([
+            ('scaler', StandardScaler()),
+            ('pca', PCA()),
+            ('rf', RandomForestClassifier(random_state=42)) #tarda mucho
+        ])
+
+        self.pipe_svm = Pipeline([
+            ('csp', CSP()), #tengo que comprobar X.shape
+            ('scaler', StandardScaler()),
+            ('svm', SVC(random_state=42))
         ])
 
         cv = ShuffleSplit(10, test_size=0.2, random_state=42)
@@ -131,16 +153,16 @@ class Data_EEG:
         if not task == "experiment":
             print(scores)
             print("cross_val_score:", scores.mean())
-        #self.grid = GridSearchCV(self.pipe, param_grid, cv=cv, n_jobs=-1, scoring="accuracy", verbose=False)
-        #self.grid.fit(self.X_train, self.y_train)
-        self.pipe.fit(self.X_train, self.y_train)
+        self.grid = GridSearchCV(self.pipe, param_grid_lda, cv=cv, n_jobs=-1, scoring="accuracy", verbose=False)
+        self.grid.fit(self.X_train, self.y_train)
+        #self.pipe.fit(self.X_train, self.y_train)
     
 
     def predict(self, task="experiment"):
         if not task == "experiment":
             try:
-                #self.grid = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
-                self.pipe = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
+                self.grid = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
+                #self.pipe = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
             except Exception as e:
                 print(e)
                 exit(1)
@@ -148,7 +170,8 @@ class Data_EEG:
         accuracy = []
         for n in range(self.X_test.shape[0]):
             #pred = self.grid.best_estimator_.predict(self.X_test[n:n + 1, :, :])[0]
-            pred = self.pipe.predict(self.X_test[n].reshape(1, -1))[0]
+            pred = self.grid.best_estimator_.predict(self.X_test[n].reshape(1, -1))[0]
+            #pred = self.pipe.predict(self.X_test[n].reshape(1, -1))[0]
             truth = self.y_test[n:n + 1][0]
             accuracy.append(pred == truth)
             if not task == "experiment":
