@@ -1,3 +1,4 @@
+import os
 import mne
 import argparse
 import matplotlib.pyplot as plt
@@ -26,6 +27,9 @@ class Report:
     
 
     def preprocess(self):
+        if not os.path.exists("figs"):
+                    os.makedirs("figs")
+
         channels_names = ['FC5', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'C5',
         'C3', 'C1', 'Cz', 'C2', 'C4', 'C6', 'CP5', 'CP3', 'CP1',
         'CPz', 'CP2', 'CP4', 'CP6', 'Fp1', 'Fpz', 'Fp2', 'AF7', 'AF3',
@@ -41,20 +45,35 @@ class Report:
         self.raw.set_montage(montage)
             
         fig = montage.plot(show=False)
-        plt.savefig("montage_plt.png")
+        plt.savefig("figs/montage_plt.png")
         plt.close(fig)
 
         self.raw_filtered = self.raw.copy()
         self.raw_filtered.filter(l_freq=8., h_freq=40., picks='eeg')
         self.raw_filtered.notch_filter(freqs=60)
 
+        fig = self.raw.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw")
+        plt.savefig("figs/raw_data.png")
+        plt.close(fig)
+        
+        fig = self.raw_filtered.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw Filtered")
+        plt.savefig("figs/raw_filtered.png")
+        plt.close(fig)
+
         self.raw_filtered.set_eeg_reference('average', projection=True)
+
+        fig = self.raw_filtered.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw Reference Change")
+        plt.savefig("figs/reference_change.png")
+        plt.close(fig)
 
 
     def create_html(self):
         report = mne.Report(title=f"Report {self.subject} {self.run}")
         
-        report.add_image(image="montage_plt.png", title="Montage")
+        report.add_image(image="figs/montage_plt.png", title="Montage")
+        report.add_image(image="figs/raw_data.png", title="Raw data", section="Comparation data")
+        report.add_image(image="figs/raw_filtered.png", title="Raw filtered", section="Comparation data")
+        report.add_image(image="figs/reference_change.png", title="Reference change", section="Comparation data")
         report.add_raw(raw=self.raw, title="Raw", psd=True)
         report.add_raw(raw=self.raw_filtered, title="Raw Filtered", psd=True)
         report.add_events(events=self.events, title="Events", sfreq=self.raw_filtered.info["sfreq"])

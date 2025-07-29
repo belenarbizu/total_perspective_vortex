@@ -40,13 +40,8 @@ class Data_EEG:
             self.raw_filtered.filter(l_freq=8., h_freq=40., picks='eeg')
             self.raw_filtered.notch_filter(freqs=60)
             
-            self.plot_filter()
-            
-            #set reference and plot it
+            #set reference
             self.raw_filtered.set_eeg_reference('average', projection=True)
-            fig = self.raw_filtered.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw Reference Change")
-            plt.savefig("reference_change.png")
-            plt.close(fig)
 
             self.events, self.event_id = mne.events_from_annotations(self.raw_filtered)
 
@@ -76,15 +71,6 @@ class Data_EEG:
 
         mapping = {name: channels_names[i] for i, name in enumerate(self.raw.ch_names)}
         self.raw.rename_channels(mapping)
-
-    def plot_filter(self):
-        fig = self.raw.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw")
-        plt.savefig("raw_data.png")
-        plt.close(fig)
-        
-        fig = self.raw_filtered.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw Filtered")
-        plt.savefig("raw_filtered.png")
-        plt.close(fig)
 
 
     def epoch_data(self):
