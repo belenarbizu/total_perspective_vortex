@@ -1,5 +1,6 @@
 import mne
 import argparse
+import matplotlib.pyplot as plt
 
 class Report:
     def __init__(self, subject=None, run=None):
@@ -38,9 +39,14 @@ class Report:
 
         montage = mne.channels.make_standard_montage('standard_1020')
         self.raw.set_montage(montage)
+            
+        fig = montage.plot(show=False)
+        plt.savefig("montage_plt.png")
+        plt.close(fig)
 
         self.raw_filtered = self.raw.copy()
         self.raw_filtered.filter(l_freq=8., h_freq=40., picks='eeg')
+        self.raw_filtered.notch_filter(freqs=60)
 
         self.raw_filtered.set_eeg_reference('average', projection=True)
 
@@ -48,7 +54,9 @@ class Report:
     def create_html(self):
         report = mne.Report(title=f"Report {self.subject} {self.run}")
         
-        report.add_raw(raw=self.raw_filtered, title="Raw", psd=False)
+        report.add_image(image="montage_plt.png", title="Montage")
+        report.add_raw(raw=self.raw, title="Raw", psd=True)
+        report.add_raw(raw=self.raw_filtered, title="Raw Filtered", psd=True)
         report.add_events(events=self.events, title="Events", sfreq=self.raw_filtered.info["sfreq"])
         report.add_epochs(epochs=self.epochs, title="Epochs")
         report.add_evokeds(evokeds=self.evokeds, titles=self.evokeds_title)
