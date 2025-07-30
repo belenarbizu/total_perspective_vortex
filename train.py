@@ -21,6 +21,13 @@ BAD_SUBJECTS = [100, 104, 106]
 
 class Data_EEG:
     def __init__(self, subject=None, run=None, task=None):
+        '''
+        Initializes the EEG data processing pipeline, loads raw data, and performs preprocessing.
+        Args:
+            subject (int, optional): Subject ID number. Defaults to None.
+            run (int, optional): Run number for the subject. Defaults to None.
+            task (str, optional): Task to perform ('train' or 'predict'). Defaults to None.
+        '''
         mne.set_log_level("WARNING")
         if not subject and not run and not task:
             self.experiments()
@@ -61,6 +68,10 @@ class Data_EEG:
 
 
     def change_channels_names(self):
+        '''
+        Renames EEG channels to standard 10-20 system nomenclature.
+        Updates the raw data channel names to match standard electrode positions.
+        '''
         channels_names = ['FC5', 'FC3', 'FC1', 'FCz', 'FC2', 'FC4', 'FC6', 'C5',
         'C3', 'C1', 'Cz', 'C2', 'C4', 'C6', 'CP5', 'CP3', 'CP1',
         'CPz', 'CP2', 'CP4', 'CP6', 'Fp1', 'Fpz', 'Fp2', 'AF7', 'AF3',
@@ -74,19 +85,34 @@ class Data_EEG:
 
 
     def epoch_data(self):
+        '''
+        Creates epochs from filtered EEG data and computes time-frequency power.
+        Selects specific motor cortex channels and applies Morlet wavelet transform.
+        Returns:
+            tuple: (epochs, power) - MNE Epochs object and time-frequency power data.
+        '''
         channels_to_use = ['FC3', 'FCz', 'FC4', 'C3', 'Cz', 'C4', 'CP3', 'CPz', 'CP4']
         picks = mne.pick_channels(self.raw_filtered.info['ch_names'], include=channels_to_use)
         epochs = mne.Epochs(self.raw_filtered, self.events, event_id=self.event_id, picks=picks, tmin=-0.1, tmax=4.0, baseline=None, preload=True, verbose=False)
         epochs.drop_bad()
         epochs = epochs["T1", "T2"]
 
-        freqs = np.arange(8, 40, 2) #frequencias desde 8 a 40 Hz
+        #morlet wavelet transform
+        freqs = np.arange(8, 40, 2)
         power = epochs.compute_tfr('morlet', tmin=-0.1, tmax=4.0, freqs=freqs, return_itc=False)
 
         return epochs, power
 
 
     def set_numbers(self, subject, run):
+        '''
+        Formats subject and run numbers with leading zeros for file naming consistency.
+        Args:
+            subject (int): Subject ID number.
+            run (int): Run number.
+        Returns:
+            tuple: (subject, run) - Formatted strings with leading zeros.
+        '''
         if subject < 10:
             subject = "00" + str(subject)
         elif subject >= 10 and subject < 100:
@@ -97,10 +123,23 @@ class Data_EEG:
 
 
     def split_datasets(self, X, y):
+        '''
+        Splits the dataset into training and testing sets with stratification.
+        Args:
+            X (numpy.ndarray): Feature matrix.
+            y (numpy.ndarray): Target labels.
+        '''
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
 
 
     def train(self, epochs, task="experiment"):
+        '''
+        Trains a machine learning pipeline using PCA, scaling, and Linear Discriminant Analysis.
+        Performs cross-validation and hyperparameter tuning using GridSearchCV.
+        Args:
+            epochs (mne.Epochs): MNE Epochs object containing EEG data.
+            task (str, optional): Task type for output control. Defaults to "experiment".
+        '''
         self.pipe_lda = Pipeline([
             ('scaler', StandardScaler()),
             ('pca', PCA()),
@@ -108,8 +147,8 @@ class Data_EEG:
         ])
 
         cv = ShuffleSplit(10, test_size=0.2, random_state=42)
-        scores = cross_val_score(self.pipe_lda, self.X_train, self.y_train, cv=cv)
         if not task == "experiment":
+            scores = cross_val_score(self.pipe_lda, self.X_train, self.y_train, cv=cv)
             print(scores)
             print("cross_val_score:", scores.mean())
         self.grid = GridSearchCV(self.pipe_lda, param_grid_lda, cv=cv, n_jobs=-1, scoring="accuracy", verbose=False)
@@ -117,6 +156,13 @@ class Data_EEG:
     
 
     def predict(self, task="experiment"):
+        '''
+        Makes predictions on test data using the trained model and calculates accuracy.
+        Args:
+            task (str, optional): Task type for output control and model loading. Defaults to "experiment".
+        Returns:
+            float: Mean accuracy of predictions on test set.
+        '''
         if not task == "experiment":
             try:
                 self.grid = joblib.load(f"models/model_{self.subject}_{self.run}.pkl")
@@ -130,7 +176,7 @@ class Data_EEG:
             truth = self.y_test[n:n + 1][0]
             accuracy.append(pred == truth)
             if not task == "experiment":
-                self.print_pred(0, pred, truth)
+                self.print_pred(n, pred, truth)
         mean_accuracy = np.mean(accuracy)
         if not task == "experiment":
             print("Accuracy: ", mean_accuracy)
@@ -138,11 +184,23 @@ class Data_EEG:
 
 
     def print_pred(self, epoch, pred_val, true_val):
+        '''
+        Prints prediction results for individual epochs in a formatted way.
+        Args:
+            epoch (int): Epoch number.
+            pred_val (int): Predicted class label.
+            true_val (int): True class label.
+        '''
         result = True if pred_val == true_val else False
         print(f"epoch {epoch}: {pred_val} {true_val} {result}")
 
 
     def experiments(self):
+        '''
+        Runs comprehensive experiments across all subjects and different motor imagery tasks.
+        Evaluates 6 different experimental conditions including real and imagined movements.
+        Prints mean accuracy results for each experiment and overall performance.
+        '''
         #experiment 0, [3, 7, 11] T1 vs T2, left vs right fist
         #experiment 1, [5, 9, 13] T1 vs T2, both fists vs both feet
         #experiment 2, [4, 8, 12] T1 vs T2, imagine left vs right fist
@@ -182,6 +240,16 @@ class Data_EEG:
 
     
     def experiment_n(self, num, subjects, ranges, events):
+        '''
+        Executes a specific experiment across multiple subjects and runs.
+        Args:
+            num (int): Experiment number identifier.
+            subjects (list): List of subject IDs to process.
+            ranges (list): Run number ranges for the experiment.
+            events (list): Event types to classify (e.g., ['T1', 'T2']).
+        Returns:
+            float: Mean accuracy across all subjects and runs for this experiment.
+        '''
         channels_to_use = ['FC3', 'FCz', 'FC4', 'C3', 'Cz', 'C4', 'CP3', 'CPz', 'CP4']
         total_accuracy = 0
         for subject in subjects:
@@ -197,7 +265,7 @@ class Data_EEG:
                 epochs = mne.Epochs(self.raw_filtered, self.events, event_id=self.event_id, picks=picks, tmin=0, tmax=4.0, baseline=None, preload=True, verbose=False)
                 epochs.drop_bad()
                 epochs = epochs[events]
-                freqs = np.arange(8, 40, 2) #frequencias desde 8 a 40 Hz
+                freqs = np.arange(8, 40, 2)
                 power = epochs.compute_tfr('morlet', tmin=-0.1, tmax=4.0, freqs=freqs, return_itc=False)
                 X = power.get_data(picks="eeg")
                 X = X.mean(axis=-1).reshape(len(X), -1)
@@ -213,8 +281,14 @@ class Data_EEG:
 
 
 def main():
+    '''
+    Entry point for the program: handles command-line arguments and initializes the EEG data processing.
+    Creates Data_EEG instance based on provided arguments or runs all experiments if no arguments given.
+    Command-line usage:
+        - With arguments: python script.py [subject] [run] [train|predict]
+        - Without arguments: python script.py (runs all experiments)
+    '''
     parser = argparse.ArgumentParser(description='.')
-    #nargs='?' optional arguments
     parser.add_argument("subject", type=int, nargs='?', default=None, help="Subject id")
     parser.add_argument("run", type=int, nargs='?', default=None, help="Run of the subject")
     parser.add_argument("task", choices=["train", "predict"], nargs='?', default=None, help="Task to perform")
