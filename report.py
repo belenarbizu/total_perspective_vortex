@@ -4,7 +4,13 @@ import argparse
 import matplotlib.pyplot as plt
 
 class Report:
-    def __init__(self, subject=None, run=None):
+    def __init__(self, subject, run):
+        '''
+        Initializes the EEG report generator, loads raw data, preprocesses it, and creates evoked responses.
+        Args:
+            subject (int, optional): Subject ID number. Defaults to None.
+            run (int, optional): Run number for the subject. Defaults to None.
+        '''
         mne.set_log_level("WARNING")
 
         self.subject, self.run = self.set_numbers(subject, run)
@@ -93,14 +99,10 @@ class Report:
 
 def main():
     parser = argparse.ArgumentParser(description='.')
-    parser.add_argument("subject", type=int, choices=range(1, 110), nargs='?', default=None, help="Subject id")
-    parser.add_argument("run", type=int, nargs='?', choices=range(3, 15), default=None, help="Run of the subject")
+    parser.add_argument("subject", type=int, choices=range(1, 110), help="Subject id")
+    parser.add_argument("run", type=int, choices=range(3, 15), help="Run of the subject")
     args = parser.parse_args()
-    if args.subject and args.run:
-        report = Report(args.subject, args.run)
-    else:
-        parser.print_help()
-        print("Error. You must add [subject] and [run]")
+    report = Report(args.subject, args.run)
 
 
 if __name__ == "__main__":
