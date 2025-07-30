@@ -14,7 +14,7 @@ from csp import CSP
 param_grid_lda = {
     "pca__n_components": [2, 4, 6, 8, 10],
     "lda__store_covariance": [True, False],
-    "lda__solver": ['svd', 'lsqr']
+    "lda__shrinkage": ['auto', 0.1, 0.3]
 }
 
 BAD_SUBJECTS = [100, 104, 106]
@@ -55,6 +55,7 @@ class Data_EEG:
             epochs, power = self.epoch_data()
             X = power.get_data(picks="eeg")
             X = X.mean(axis=-1).reshape(len(X), -1)
+            #X = X * 1e12
             y = epochs.events[:, 2]
             self.split_datasets(X, y)
 
@@ -143,7 +144,7 @@ class Data_EEG:
         self.pipe_lda = Pipeline([
             ('scaler', StandardScaler()),
             ('pca', PCA()),
-            ('lda', LinearDiscriminantAnalysis())
+            ('lda', LinearDiscriminantAnalysis(solver="lsqr"))
         ])
 
         cv = ShuffleSplit(10, test_size=0.2, random_state=42)
