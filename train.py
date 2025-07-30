@@ -290,8 +290,8 @@ def main():
         - Without arguments: python script.py (runs all experiments)
     '''
     parser = argparse.ArgumentParser(description='.')
-    parser.add_argument("subject", type=int, nargs='?', default=None, help="Subject id")
-    parser.add_argument("run", type=int, nargs='?', default=None, help="Run of the subject")
+    parser.add_argument("subject", type=int, choices=range(1, 110), nargs='?', default=None, help="Subject id")
+    parser.add_argument("run", type=int, nargs='?', choices=range(3, 15), default=None, help="Run of the subject")
     parser.add_argument("task", choices=["train", "predict"], nargs='?', default=None, help="Task to perform")
     args = parser.parse_args()
     if args.subject and args.run and args.task:

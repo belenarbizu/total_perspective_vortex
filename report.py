@@ -14,8 +14,7 @@ class Report:
 
         self.raw_filtered.pick(picks="eeg").crop(tmax=40).load_data()
         self.events, event_id = mne.events_from_annotations(self.raw_filtered)
-        metadata, _, _ = mne.epochs.make_metadata(events=self.events, event_id=event_id, tmin=-0.2, tmax=0.5, sfreq=self.raw_filtered.info["sfreq"])
-        self.epochs = mne.Epochs(raw=self.raw_filtered, events=self.events, event_id=event_id, metadata=metadata, baseline=(None, 0))
+        self.epochs = mne.Epochs(raw=self.raw_filtered, events=self.events, event_id=event_id, baseline=(None, 0))
 
         self.evokeds = []
         self.evokeds_title = []
@@ -94,9 +93,8 @@ class Report:
 
 def main():
     parser = argparse.ArgumentParser(description='.')
-    #nargs='?' optional arguments
-    parser.add_argument("subject", type=int, nargs='?', default=None, help="Subject id")
-    parser.add_argument("run", type=int, nargs='?', default=None, help="Run of the subject")
+    parser.add_argument("subject", type=int, choices=range(1, 110), nargs='?', default=None, help="Subject id")
+    parser.add_argument("run", type=int, nargs='?', choices=range(3, 15), default=None, help="Run of the subject")
     args = parser.parse_args()
     if args.subject and args.run:
         report = Report(args.subject, args.run)
