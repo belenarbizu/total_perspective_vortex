@@ -286,8 +286,8 @@ def main():
     Entry point for the program: handles command-line arguments and initializes the EEG data processing.
     Creates Data_EEG instance based on provided arguments or runs all experiments if no arguments given.
     Command-line usage:
-        - With arguments: python script.py [subject] [run] [train|predict]
-        - Without arguments: python script.py (runs all experiments)
+        - With arguments: python train.py [subject] [run] [train|predict]
+        - Without arguments: python train.py (runs all experiments)
     '''
     parser = argparse.ArgumentParser(description='.')
     parser.add_argument("subject", type=int, choices=range(1, 110), nargs='?', default=None, help="Subject id")

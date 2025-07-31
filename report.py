@@ -32,6 +32,11 @@ class Report:
     
 
     def preprocess(self):
+        '''
+        Performs comprehensive EEG data preprocessing including channel renaming, filtering, and referencing.
+        Applies band-pass filtering (8-40 Hz), notch filtering (60 Hz), and average referencing.
+        Creates visualization plots of preprocessing steps and saves them to the figs directory.
+        '''
         if not os.path.exists("figs"):
                     os.makedirs("figs")
 
@@ -73,6 +78,11 @@ class Report:
 
 
     def create_html(self):
+        '''
+        Generates a comprehensive HTML report containing all EEG analysis results.
+        Includes raw data plots, filtered data comparisons, events, epochs, and evoked responses.
+        Saves the complete report as 'report_raw.html' with interactive visualizations.
+        '''
         report = mne.Report(title=f"Report {self.subject} {self.run}")
         
         report.add_image(image="figs/montage_plt.png", title="Montage")
@@ -89,6 +99,14 @@ class Report:
 
     
     def set_numbers(self, subject, run):
+        '''
+        Formats subject and run numbers with leading zeros for consistent file naming.
+        Args:
+            subject (int): Subject ID number.
+            run (int): Run number.
+        Returns:
+            tuple: (subject, run) - Formatted strings with leading zeros for file paths.
+        '''
         if subject < 10:
             subject = "00" + str(subject)
         elif subject >= 10 and subject < 100:
@@ -98,6 +116,11 @@ class Report:
         return subject, run
 
 def main():
+    '''
+    Entry point for the program: handles command-line arguments and initializes the EEG report generator.
+    Parses subject and run number from command line and creates a EEG analysis report.
+    Command-line usage: python train.py [subject] [run]
+    '''
     parser = argparse.ArgumentParser(description='.')
     parser.add_argument("subject", type=int, choices=range(1, 110), help="Subject id")
     parser.add_argument("run", type=int, choices=range(3, 15), help="Run of the subject")
