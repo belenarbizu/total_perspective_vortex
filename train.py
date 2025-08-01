@@ -10,6 +10,7 @@ from sklearn.model_selection import cross_val_score, train_test_split, GridSearc
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from pca import PCA
 from csp import CSP
+import time
 
 param_grid_lda = {
     "pca__n_components": [2, 4, 6, 8, 10],
@@ -55,7 +56,6 @@ class Data_EEG:
             epochs, power = self.epoch_data()
             X = power.get_data(picks="eeg")
             X = X.mean(axis=-1).reshape(len(X), -1)
-            #X = X * 1e12
             y = epochs.events[:, 2]
             self.split_datasets(X, y)
 
@@ -173,7 +173,12 @@ class Data_EEG:
 
         accuracy = []
         for n in range(self.X_test.shape[0]):
+            start_time = time.time()
             pred = self.grid.best_estimator_.predict(self.X_test[n].reshape(1, -1))[0]
+            processing_time = time.time() - start_time
+            if processing_time > 2.0:
+                print(f"Processing time: {processing_time}")
+                exit()
             truth = self.y_test[n:n + 1][0]
             accuracy.append(pred == truth)
             if not task == "experiment":
