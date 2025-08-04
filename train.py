@@ -9,7 +9,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score, train_test_split, GridSearchCV, ShuffleSplit
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from pca import PCA
-from csp import CSP
 import time
 
 param_grid_lda = {
