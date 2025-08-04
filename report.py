@@ -62,17 +62,17 @@ class Report:
         self.raw_filtered.filter(l_freq=8., h_freq=40., picks='eeg')
         self.raw_filtered.notch_filter(freqs=60)
 
-        fig = self.raw.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw", show=False)
+        fig = self.raw.plot(n_channels=10, duration=11.0, start=5.0, scalings='auto', title="Raw", show=False)
         plt.savefig("figs/raw_data.png")
         plt.close(fig)
         
-        fig = self.raw_filtered.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw Filtered", show=False)
+        fig = self.raw_filtered.plot(n_channels=10, duration=11.0, start=5.0, scalings='auto', title="Raw Filtered", show=False)
         plt.savefig("figs/raw_filtered.png")
         plt.close(fig)
 
         self.raw_filtered.set_eeg_reference('average', projection=True)
 
-        fig = self.raw_filtered.plot(n_channels=10, duration=5.0, scalings='auto', title="Raw Reference Change", show=False)
+        fig = self.raw_filtered.plot(n_channels=10, duration=11.0, start=5.0, scalings='auto', title="Raw Reference Change", show=False)
         plt.savefig("figs/reference_change.png")
         plt.close(fig)
 
