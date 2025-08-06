@@ -82,17 +82,17 @@ python mybci.py
 ```
 Example output:
 ```bash
-experiment 0: subject 001: accuracy = 0.6
-experiment 0: subject 002: accuracy = 0.8
+experiment 0: subject 001: accuracy = 0.666
+experiment 0: subject 002: accuracy = 0.555
 ....
 Mean accuracy of the six different experiments for all 109 subjects:
-experiment 0: accuracy = 0.5991
-experiment 1: accuracy = 0.5718
-experiment 2: accuracy = 0.7130
-experiment 3: accuracy = 0.6035
-experiment 4: accuracy = 0.5937
-experiment 5: accuracy = 0.6753
-Mean accuracy of 6 experiments: 0.6261
+experiment 0:    accuracy = 0.6021
+experiment 1:    accuracy = 0.7594
+experiment 2:    accuracy = 0.5938
+experiment 3:    accuracy = 0.6543
+experiment 4:    accuracy = 0.6977
+experiment 5:    accuracy = 0.8471
+Mean accuracy of 6 experiments: 0.6924
 ```
 
 ---
