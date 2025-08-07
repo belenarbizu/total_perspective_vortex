@@ -5,13 +5,10 @@ This project implements a Brain-Computer Interface (BCI) based on electroencepha
 
 ## Project Structure
 
-- `mybci.py`: Main script for training and prediction with command-line interface
-- `preprocessing.py`: EEG data parsing, filtering, and feature extraction using MNE
+- `train.py`: Main script for training and prediction
+- `report.py`: Data visualization using MNE Report class
 - `csp.py`: Custom implementation of Common Spatial Patterns (CSP) algorithm
 - `pca.py`: Custom Principal Component Analysis (PCA) implementation
-- `wavelet_transform.py`: Wavelet transform implementation for signal processing
-- `pipeline.py`: Complete processing pipeline integrating all components
-- `visualization.py`: Utilities for data visualization and analysis
 
 ---
 
